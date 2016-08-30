@@ -741,6 +741,14 @@ public class TwitterBot implements ITwitterBot {
 				}
 			}
 
+			// process #systemproperty# tag
+			String systempropertyTag = "#systemproperty#";
+			boolean hasSystempropertyTag = message.contains(systempropertyTag);
+			if(hasSystempropertyTag){
+				message = message.replaceAll(systempropertyTag, "");
+				message = ReplyBotStats.ReplySystemproperty();
+			}
+
 			// process #noreply# tag
 			String noreplyTag = "#noreply#";
 			boolean hasNoreplyTag = message.contains(noreplyTag);
