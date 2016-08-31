@@ -374,6 +374,14 @@ public class TwitterBot implements ITwitterBot {
 		 }
 
 		// get timeline
+		int maxpage;
+		maxpage = ReadBotStatsFile.getStatsValueInteger(SYSTEM_TXT_FILE, "MAX_PAGE_OF_GETTING_TIMELINE");
+
+		// •ÛŒ¯
+		if(maxpage == -1) {
+			maxpage = MAX_PAGE_OF_GETTING_TIMELINE;
+		}
+
 		List<Status> allStatuses =
 			mapHomeTimeline.get(keyTwitterAccount);
 		if(allStatuses == null){
@@ -395,7 +403,7 @@ public class TwitterBot implements ITwitterBot {
 					page++;
 					if(hasRest) paging = new Paging(page);
 					paging.setCount(200);
-				} while (hasRest && page <= MAX_PAGE_OF_GETTING_TIMELINE);
+				} while (hasRest && page <= maxpage);
 
 			} catch (TwitterException e) {
 				log.log(Level.WARNING,
@@ -741,12 +749,12 @@ public class TwitterBot implements ITwitterBot {
 				}
 			}
 
-			// process #systemproperty# tag
-			String systempropertyTag = "#systemproperty#";
+			// process #botstats# tag
+			String systempropertyTag = "#botstats#";
 			boolean hasSystempropertyTag = message.contains(systempropertyTag);
 			if(hasSystempropertyTag){
 				message = message.replaceAll(systempropertyTag, "");
-				message = ReplyBotStats.ReplySystemproperty();
+				message = ReadBotStatsFile.ReadBotStats(SYSTEM_TXT_FILE);
 			}
 
 			// process #noreply# tag
