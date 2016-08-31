@@ -11,32 +11,32 @@ public class ReplyBotStats {
 	/** Data I/O text file */
 	private static final File DATA_TXT_FILE = new File("datafile/datatxt.txt");
 
-
 	public static String ReplySystemproperty() {
-		String txtline = null;
-		String message = null;
+		String message = "\n";
 
 		BufferedReader br;
 		try {
 			br = new BufferedReader(new FileReader(SYSTEM_TXT_FILE));
 
-			while ((txtline = br.readLine()) != null) {
+			while (br.ready()) {
 
-				if(txtline.matches(".*//.*") || txtline == null) {
+				String readed = br.readLine();
+
+				if (readed.matches(".*//.*") || readed.length() == 0) {
 					continue;
 				}
 
-				txtline = txtline.replaceAll(" ", "");
+				readed = readed.replaceAll(" ", "");
 
-				//Systemtxtで設定されている値の右辺と左辺を分ける
-				String[] splittxtbyeq = txtline.split("=", 0);
+				// Systemtxtで設定されている値の右辺と左辺を分ける
+				String[] splittxtbyeq = readed.split("=", 0);
 
-				//左辺の各単語の頭文字をとり略称を作る
+				// 左辺の各単語の頭文字をとり略称を作る
 				String[] splittxtbyub = splittxtbyeq[0].split("_", 0);
-				String propertyname = null;
+				String propertyname = "";
 
-				for(int i=0; i<=splittxtbyub.length; i++){
-					propertyname = propertyname + splittxtbyub[i].substring(0,0);
+				for (int i = 0; i < splittxtbyub.length; i++) {
+					propertyname = propertyname + splittxtbyub[i].substring(0, 1);
 				}
 
 				message = message + propertyname + "=" + splittxtbyeq[1] + "\n";
