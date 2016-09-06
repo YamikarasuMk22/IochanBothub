@@ -81,7 +81,7 @@ public class TwitterBot implements ITwitterBot {
 	private static final File SYSTEM_TXT_FILE = new File("datafile/systemtxt.txt");
 
 	/** Data I/O text file */
-	private static final File DATA_TXT_FILE = new File("datafile/datatxt.txt");
+	//private static final File DATA_TXT_FILE = new File("datafile/datatxt.txt");
 
 	/**
 	 * Constructor
