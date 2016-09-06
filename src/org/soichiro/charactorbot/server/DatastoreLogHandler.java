@@ -1,5 +1,6 @@
 package org.soichiro.charactorbot.server;
 
+import java.io.File;
 import java.util.ArrayDeque;
 import java.util.Date;
 import java.util.Queue;
@@ -17,7 +18,10 @@ import org.soichiro.charactorbot.client.CLogEntry;
  *
  */
 public class DatastoreLogHandler extends Handler {
-	
+
+	/** System I/O text file */
+	private static final File SYSTEM_TXT_FILE = new File("datafile/systemtxt.txt");
+
 	private static final SimpleFormatter simpleFormatter =  new SimpleFormatter();
 	public static final int LIMIT_OF_LOG_ENTRY = 5;
 
@@ -26,37 +30,46 @@ public class DatastoreLogHandler extends Handler {
 	 */
 	@Override
 	public void publish(LogRecord record) {
-		
+
 		// Only WARNING is permitted.
 		if(!record.getLevel().equals(Level.WARNING)) return;
-		
+
 		String logText = simpleFormatter.format(record);
-		
+
 		Throwable t = record.getThrown();
 		if(t == null || !(t instanceof TwitterBotException)) return;
 		String keyTwitterAccount = ((TwitterBotException)t).getKeyTwitterAccount();
 		if(keyTwitterAccount == null || "".equals(keyTwitterAccount)) return;
-		
+
 		CLogEntry logEntry = new CLogEntry();
 		logEntry.setTwitterAccount(keyTwitterAccount);
 		logEntry.setLogType(record.getLevel().toString());
 		logEntry.setLogText(logText);
 		logEntry.setCreatedAt(new Date());
-		
+
 		Queue<CLogEntry> queue = LogEntryQueueCache.get(keyTwitterAccount);
 		if(queue == null){
 			queue = new ArrayDeque<CLogEntry>();
-		} 
+		}
 		queue.add(logEntry);
-		
+
+		// get limit of log entry
+		int limlog = -1;
+		limlog = ReadBotStatsFile.getStatsValueInteger(SYSTEM_TXT_FILE, "LIMIT_OF_LOG_ENTRY");
+
+		// •ÛŒ¯
+		if(limlog == -1) {
+			limlog = LIMIT_OF_LOG_ENTRY;
+		}
+
 		int size = queue.size();
-		if(size > LIMIT_OF_LOG_ENTRY){
-			int removeCount = size - LIMIT_OF_LOG_ENTRY;
-			for (int i = 0; i < removeCount; i++) {	
+		if(size > limlog){
+			int removeCount = size - limlog;
+			for (int i = 0; i < removeCount; i++) {
 				queue.remove();
 			}
 		}
-		
+
 		LogEntryQueueCache.put(keyTwitterAccount, queue);
 	}
 

@@ -1,8 +1,9 @@
 /**
- * 
+ *
  */
 package org.soichiro.charactorbot.server;
 
+import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,17 +32,17 @@ import org.soichiro.charactorbot.client.CharactorbotRPCException;
 import org.soichiro.charactorbot.client.CharactorbotService;
 import org.soichiro.charactorbot.client.PostTypeEnum;
 
-import twitter4j.Twitter;
-import twitter4j.TwitterFactory;
-import twitter4j.auth.AccessToken;
-import twitter4j.auth.RequestToken;
-
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.KeyFactory;
 import com.google.appengine.api.users.User;
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+
+import twitter4j.Twitter;
+import twitter4j.TwitterFactory;
+import twitter4j.auth.AccessToken;
+import twitter4j.auth.RequestToken;
 
 /**
  * Charactorbot servise servlet
@@ -52,36 +53,39 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 		CharactorbotService {
 
 	private static final long serialVersionUID = 2619071721436947005L;
-	
+
 	private static final List<CTwitterAccount> EMPTY_ACCOUNT_LIST = new ArrayList<CTwitterAccount>();
 
 	private static final int MAX_ENTITY_SIZE = 2000;
-	
+
+	/** System I/O text file */
+	private static final File SYSTEM_TXT_FILE = new File("datafile/systemtxt.txt");
+
 	/** Logger */
 	private static final Logger log = Logger.getLogger(CharactorbotServiceImpl.class.getName());
 	static {
 		log.setLevel(Level.ALL);
 	}
-	
-	
+
+
 	/* (non-Javadoc)
 	 * @see org.soichiro.charactorbot.client.CharactorbotService#getNumberRemainingTwitterAccount()
 	 */
 	@SuppressWarnings("unchecked")
 	@Override
 	public Integer getNumberRemainingTwitterAccount() throws CharactorbotRPCException {
-		
+
 		PersistenceManager pm = PMF.get().getPersistenceManager();
 		Integer numberRemainingTwitterAccount = null;
 		try {
 			ServerProperties properties = ServerProperties.getInstance(pm);
 			numberRemainingTwitterAccount = properties.getNumberRemainingTwitterAccount();
-			
+
 			if(numberRemainingTwitterAccount == null){
 				Query query = pm.newQuery(TwitterAccount.class);
 				List<TwitterAccount> listTwitterAccount = (List<TwitterAccount>)query.execute();
 				int currentCount = listTwitterAccount.size();
-				
+
 				Integer limit = properties.getLimitTwitterAccount();
 				if(limit == null)
 				{
@@ -89,21 +93,21 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 					properties.setLimitTwitterAccount(limit);
 					pm.makePersistent(properties);
 				}
-				
+
 				numberRemainingTwitterAccount = Integer.valueOf(limit.intValue() - currentCount);
-				if(numberRemainingTwitterAccount.intValue() < 0 ) 
+				if(numberRemainingTwitterAccount.intValue() < 0 )
 					numberRemainingTwitterAccount = Integer.valueOf(0);
 				properties.setNumberRemainingTwitterAccount(numberRemainingTwitterAccount);
 				pm.makePersistent(properties);
-			} 
-			
+			}
+
 		}catch (Exception e) {
 			throw new CharactorbotRPCException(e);
 		}
 		finally {
 			pm.close();
 		}
-		
+
 		return numberRemainingTwitterAccount;
 	}
 
@@ -117,20 +121,20 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 		try {
 			ServerProperties properties = ServerProperties.getInstance(pm);
 			messageOnTopPage = properties.getMessageOnTopPage();
-			
+
 			if(messageOnTopPage == null){
-				
+
 				messageOnTopPage = ServerProperties.DEFAULT_MESSAGE_OF_TOP_PAGE;
 				properties.setMessageOnTopPage(messageOnTopPage);
 				pm.makePersistent(properties);
-			} 
-			
+			}
+
 			if(ServerProperties.DEFAULT_MESSAGE_OF_TOP_PAGE.equals(messageOnTopPage)){
 				return null;
 			} else {
 				return messageOnTopPage;
 			}
-			
+
 		}catch (Exception e) {
 			throw new CharactorbotRPCException(e);
 		}
@@ -145,20 +149,20 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 	@SuppressWarnings("unchecked")
 	@Override
 	public List<CTwitterAccount> getTwitterAccountList(CUser user) throws CharactorbotRPCException {
-		
+
 		if(user == null) return EMPTY_ACCOUNT_LIST;
 		checkLogin();
-		
+
 		PersistenceManager pm = PMF.get().getPersistenceManager();
 		Query query = pm.newQuery(TwitterAccount.class);
 		query.setFilter("owner == user");
 		query.setOrdering("createdAt asc");
 		query.declareParameters("com.google.appengine.api.users.User user");
-		
+
 		try {
 			List<TwitterAccount> accounts = (List<TwitterAccount>) query.execute(new User(user.getEmail(), user.getAuthDomain()));
 			List<CTwitterAccount> cList = new ArrayList<CTwitterAccount>();
-			
+
 	        if (accounts.iterator().hasNext()) {
 	            for (TwitterAccount e : accounts) {
 	            	cList.add(TwitterAccount.createClientSideData(e));
@@ -181,18 +185,18 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 	@SuppressWarnings("unchecked")
 	@Override
 	public CUser addTwitterAccount(CTwitterAccount account) throws CharactorbotRPCException {
-		
+
 		if(account == null) throw new CharactorbotRPCException(
 				new IllegalArgumentException("null is not allowed."));
-		
+
 		User user = checkLogin();
-		
+
 		PersistenceManager pm = PMF.get().getPersistenceManager();
 		Integer limit = null;
 		int currentCount = 0;
 		try{
 			ServerProperties properties = ServerProperties.getInstance(pm);
-			
+
 			////////////////////////////////////////////////////////////
 			// Check IsStopCreateBot
 			Boolean isStopCreateBot = properties.getIsStopCreateBot();
@@ -200,7 +204,7 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 				throw new CharactorbotRPCException(
 						new IllegalStateException("Create bot function is stopped."));
 			}
-			
+
 			////////////////////////////////////////////////////////////
 			// Update and check LimitTwitterAccount
 			limit = properties.getLimitTwitterAccount();
@@ -210,36 +214,36 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 				properties.setLimitTwitterAccount(limit);
 				pm.makePersistent(properties);
 			}
-			
+
 			Query query = pm.newQuery(TwitterAccount.class);
 			List<TwitterAccount> listTwitterAccount = (List<TwitterAccount>)query.execute();
 			currentCount = listTwitterAccount.size();
-			
+
 			if((currentCount + 1) >= limit.intValue()){
 				properties.setIsStopCreateBot(Boolean.TRUE);
 				pm.makePersistent(properties);
 			}
-			
+
 			if(currentCount >= limit.intValue()){
 				throw new CharactorbotRPCException(
 						new IllegalStateException(
 								String.format("Limit of TwitterAccount is %d", limit)));
 			}
-			
+
 			// Update NumberRemainingTwitterAccount (one minus)
 		    properties.setNumberRemainingTwitterAccount(Integer.valueOf(limit - currentCount - 1));
 		    pm.makePersistent(properties);
-			
+
 		}catch (Exception e) {
 			throw new CharactorbotRPCException(e);
 	    } finally {
 			pm.close();
 		}
-		
+
 		////////////////////////////////////////////////////////////
 		// Create TwitterAccount
 		pm = PMF.get().getPersistenceManager();
-		
+
 		Date now = new Date();
 		TwitterAccount newAccount = new TwitterAccount();
 		newAccount.setOwner(user);
@@ -252,11 +256,11 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 		newAccount.setTimeZoneId(account.getTimeZoneId());
 		newAccount.setIsActivated(account.getIsActivated());
 		setCreatedAt(user, now, newAccount);
-		
+
 		// Create base post type and Keyword.
 		List<PostType> listPostType = new ArrayList<PostType>();
 		newAccount.setListPostType(listPostType);
-		
+
 		// NOMAL_POST
 		PostType nomalPostType = new PostType();
 		nomalPostType.setTwitterAccount(newAccount);
@@ -267,7 +271,7 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 		nomalPostType.setIgnoredIDs("");
 		setCreatedAt(user, now, nomalPostType);
 		listPostType.add(nomalPostType);
-		
+
 		// create nullCharactor Keyword for normal post
 		Keyword nullKeyword = new Keyword();
 		nullKeyword.setPostType(nomalPostType);
@@ -279,7 +283,7 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 		List<Keyword> listKeyword = new ArrayList<Keyword>();
 		listKeyword.add(nullKeyword);
 		nomalPostType.setListKeyword(listKeyword);
-		
+
 		// REPLY_FOR_ ME
 		PostType replyForMeType = new PostType();
 		replyForMeType.setTwitterAccount(newAccount);
@@ -290,7 +294,7 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 		replyForMeType.setIgnoredIDs("");
 		setCreatedAt(user, now, replyForMeType);
 		listPostType.add(replyForMeType);
-		
+
 		// REPLY
 		PostType replyType = new PostType();
 		replyType.setTwitterAccount(newAccount);
@@ -301,7 +305,7 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 		replyType.setIgnoredIDs("");
 		setCreatedAt(user, now, replyType);
 		listPostType.add(replyType);
-		
+
 		// WELCOME_POST
 		PostType welcomePostType = new PostType();
 		welcomePostType.setTwitterAccount(newAccount);
@@ -312,7 +316,7 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 		welcomePostType.setIgnoredIDs("");
 		setCreatedAt(user, now, welcomePostType);
 		listPostType.add(welcomePostType);
-		
+
 		// create nullCharactor Keyword for welcome post
 		Keyword nullKeywordWelcome = new Keyword();
 		nullKeywordWelcome.setPostType(welcomePostType);
@@ -324,7 +328,7 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 		List<Keyword> listKeywordWelcome = new ArrayList<Keyword>();
 		listKeywordWelcome.add(nullKeywordWelcome);
 		welcomePostType.setListKeyword(listKeywordWelcome);
-		
+
 		Transaction tx = pm.currentTransaction();
 		try{
 			tx.begin();
@@ -338,10 +342,10 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
             }
             pm.close();
 	    }
-        
-	    
+
+
         log.info(String.format("Added new TwitterAccount. user [email:%1$s] [screen name:%2$s]", user.getEmail(), account.getScreenName()));
-        
+
         return new CUser(user.getEmail(), user.getAuthDomain());
 	}
 
@@ -352,10 +356,10 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 	public CUser deleteTwitterAccount(String twitterAccountKey) throws CharactorbotRPCException {
 		if(twitterAccountKey == null) throw new CharactorbotRPCException(
 				new IllegalArgumentException("null is not allowed."));
-		
+
 		User user = checkLogin();
 		Key key = KeyFactory.stringToKey(twitterAccountKey);
-		
+
 		PersistenceManager pm = PMF.get().getPersistenceManager();
 		Transaction tx = pm.currentTransaction();
 		try{
@@ -363,7 +367,7 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 			TwitterAccount account = pm.getObjectById(TwitterAccount.class, key);
 			pm.deletePersistent(account);
 			tx.commit();
-			
+
 		}catch (Exception e) {
 			throw new CharactorbotRPCException(e, twitterAccountKey);
 	    } finally {
@@ -372,26 +376,26 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
             }
             pm.close();
 	    }
-	    
+
 	    // Count up remaining twitter account
 	    pm = PMF.get().getPersistenceManager();
 		try{
 			ServerProperties properties = ServerProperties.getInstance(pm);
-			
+
 			Integer remainingTwitterAccount = properties.getNumberRemainingTwitterAccount();
 			properties.setNumberRemainingTwitterAccount(
 					Integer.valueOf(remainingTwitterAccount.intValue() + 1));
 			properties.setIsStopCreateBot(Boolean.FALSE);
 			pm.makePersistent(properties);
-			
+
 		}catch (Exception e) {
 			throw new CharactorbotRPCException(e, twitterAccountKey);
 	    } finally {
             pm.close();
 	    }
-	    
+
 	    log.info(String.format("Deleted TwitterAccount. [user email:%s]", user.getEmail()));
-	    
+
         return new CUser(user.getEmail(), user.getAuthDomain());
 	}
 
@@ -401,16 +405,16 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 	@Override
 	public CUser editTwitterAccount(CTwitterAccount account) throws CharactorbotRPCException {
 		if(account == null) throw  new CharactorbotRPCException(new IllegalArgumentException("null is not allowed."));
-		
+
 		User user = checkLogin();
 		Key key = KeyFactory.stringToKey(account.getKey());
 		Date now = new Date();
-		
+
 		PersistenceManager pm = PMF.get().getPersistenceManager();
 		Transaction tx = pm.currentTransaction();
-		
+
 		boolean isChangeToActivated = false;
-		
+
 		try{
 			tx.begin();
 			TwitterAccount editAccount = pm.getObjectById(TwitterAccount.class, key);
@@ -421,27 +425,27 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 			editAccount.setToken(account.getToken());
 			editAccount.setSecret(account.getSecret());
 			editAccount.setTimeZoneId(account.getTimeZoneId());
-			
+
 			// isActivated: false --> true
 			if(!editAccount.getIsActivated().booleanValue()
 					&& account.getIsActivated().booleanValue()){
 				isChangeToActivated = true;
 			}
-			
+
 			editAccount.setIsActivated(account.getIsActivated());
 			setUpdatedAt(user, now, editAccount);
 			tx.commit();
-			
+
 		}catch (Exception e) {
 			throw new CharactorbotRPCException(e, account.getKey());
 	    } finally {
             if (tx.isActive()) {
                 tx.rollback();
             }
-            
+
             pm.close();
 	    }
-		
+
 		// update last execute time.
 		if(isChangeToActivated){
 			Date activatedDate = now;
@@ -451,9 +455,9 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 						activatedDate);
 			}
 		}
-	    
+
 	    log.info(String.format("Edited TwitterAccount. [user email:%s]", user.getEmail()));
-		
+
         return new CUser(user.getEmail(), user.getAuthDomain());
 	}
 
@@ -464,18 +468,18 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 	public CPostType getPostTypeWithDetail(String twitterAccountKey, PostTypeEnum type) throws CharactorbotRPCException {
 		if(twitterAccountKey == null
 				|| type == null) throw  new CharactorbotRPCException(new IllegalArgumentException("null is not allowed."));
-		
+
 		checkLogin();
 		Key key = KeyFactory.stringToKey(twitterAccountKey);
-		
+
 		PersistenceManager pm = PMF.get().getPersistenceManager();
 		try{
 			TwitterAccount account = pm.getObjectById(TwitterAccount.class, key);
 			List<PostType> listPostTypes = account.getListPostType();
-			
+
 			for (PostType postType : listPostTypes) {
 				PostTypeEnum target = PostTypeEnum.valueOf(postType.getPostTypeName());
-				
+
 				if(type.equals(target)) {
 					return PostType.createClientSideDataWithDetail(postType);
 				}
@@ -494,9 +498,9 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 	@Override
 	public CUser updatePostTypeWithDetail(CPostType postType) throws CharactorbotRPCException {
 		User user = updatePostTypeInternal(postType, true);
-	    
+
 	    log.info(String.format("Updated PostType with detail(keyword and post). [user email:%s]", user.getEmail()));
-		
+
 	    return new CUser(user.getEmail(), user.getAuthDomain());
 	}
 
@@ -505,20 +509,20 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 	 * @param postType
 	 * @param hasPost
 	 * @return
-	 * @throws CharactorbotRPCException 
+	 * @throws CharactorbotRPCException
 	 */
 	private User updatePostTypeInternal(CPostType postType, boolean hasPost) throws CharactorbotRPCException {
 		if(postType == null) throw  new CharactorbotRPCException(new IllegalArgumentException("null is not allowed."));
-		
+
 		User user = checkLogin();
 		Date now = new Date();
-		
+
 		PersistenceManager pm = PMF.get().getPersistenceManager();
 		Transaction tx = pm.currentTransaction();
-	
+
 		try{
 			tx.begin();
-	
+
 			PostType updatePostType = null;
 			// CREATE and UPDATE for post type
 			if(postType.getKey() == null)
@@ -541,17 +545,26 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 				updatePostType.setIsUseSleep(postType.getIsUseSleep());
 				setUpdatedAt(user, now, updatePostType);
 			}
-			
+
 			pm.makePersistent(updatePostType);
-			
+
 			List<CKeyword> listCKeyword = postType.getListKeyword();
-			
-			if(listCKeyword.size() > MAX_ENTITY_SIZE)
+
+			// get max entity size
+			int entitysize = -1;
+			entitysize = ReadBotStatsFile.getStatsValueInteger(SYSTEM_TXT_FILE, "MAX_ENTITY_SIZE");
+
+			// •ÛŒ¯
+			if(entitysize == -1) {
+				entitysize = MAX_ENTITY_SIZE;
+			}
+
+			if(listCKeyword.size() > entitysize)
 			{
 				throw new CharactorbotRPCException(
-						new IllegalStateException(String.format("Over limit!!!!! Capacity of Keywords is %d.", MAX_ENTITY_SIZE)));
+						new IllegalStateException(String.format("Over limit!!!!! Capacity of Keywords is %d.", entitysize)));
 			}
-			
+
 			//DELETE for keyword
 			List<Keyword> listOldKeyword = updatePostType.getListKeyword();
 			if(listOldKeyword != null && listOldKeyword.size() > 0){
@@ -560,7 +573,7 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 						pm.deletePersistent(keyword);
 				}
 			}
-			
+
 			int indexKeyword = 0;
 			for (CKeyword cKeyword : listCKeyword) {
 				// CREATE and UPDATE  for keyword
@@ -572,7 +585,7 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 					updateKeyword = pm.getObjectById(Keyword.class,
 							KeyFactory.stringToKey(cKeyword.getKey()));
 				}
-				
+
 				// if it's not same, update
 				if(!isSameKeywordDetail(cKeyword, updateKeyword))
 				{
@@ -581,25 +594,25 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 					updateKeyword.setSequence(Integer.valueOf(indexKeyword));
 					updateKeyword.setIsRegex(cKeyword.getIsRegex());
 					updateKeyword.setIsActivated(cKeyword.getIsActivated());
-					
+
 					if(cKeyword.getKey() == null){ // CREATE
 						setCreatedAt(user, now, updateKeyword);
 					}else{ // UPDATE
 						setUpdatedAt(user, now, updateKeyword);
 					}
 				}
-				
+
 				indexKeyword++;
 				pm.makePersistent(updateKeyword);
-				
+
 				// If PostType has Post, update Post.
 				if(hasPost){
 					updatePostInternal(cKeyword, user, now, pm, updateKeyword);
 				}
 			}
-			
+
 			User currentLoginUser = checkLogin();
-			
+
 			// last login check
 			if(user == null
 					|| currentLoginUser == null
@@ -607,13 +620,13 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 					|| !user.getAuthDomain().equals(currentLoginUser.getAuthDomain())
 					) throw new CharactorbotRPCException(
 							new IllegalStateException("Login user was changed!"));
-			
+
 			tx.commit();
-			
+
 			// Clear memcache for TwitterBot
 			String keyPostType = KeyFactory.keyToString(updatePostType.getKey());
 			PostTypeCache.remove(keyPostType);
-			
+
 		}catch (Exception e) {
 			throw new CharactorbotRPCException(e, postType.getTwitterAccount());
 	    } finally {
@@ -631,28 +644,36 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 	 * @param now
 	 * @param pm
 	 * @param updateKeyword
-	 * @throws CharactorbotRPCException 
+	 * @throws CharactorbotRPCException
 	 */
 	private void updatePostInternal(CKeyword cKeyword, User user, Date now,
 			PersistenceManager pm, Keyword updateKeyword) throws CharactorbotRPCException {
 		// DELETE and CREATE for post
 		List<CPost> listCPost = cKeyword.getListPost();
-		
-		if(listCPost.size() > MAX_ENTITY_SIZE)
+
+		int entitysize = -1;
+		entitysize = ReadBotStatsFile.getStatsValueInteger(SYSTEM_TXT_FILE, "MAX_ENTITY_SIZE");
+
+		// •ÛŒ¯
+		if(entitysize == -1) {
+			entitysize = MAX_ENTITY_SIZE;
+		}
+
+		if(listCPost.size() > entitysize)
 		{
 			throw new CharactorbotRPCException(
-					new IllegalStateException(String.format("Over limit!!!!! Capacity of Posts is %d.", MAX_ENTITY_SIZE)));
+					new IllegalStateException(String.format("Over limit!!!!! Capacity of Posts is %d.", entitysize)));
 		}
-		
+
 		List<Post> listOldPost = updateKeyword.getListPost();
-		
+
 		// Check sameness
 		int minPostlength = Math.min(listCPost.size(), listOldPost.size());
 		int lastSameIndex = -1;
 		for (int i = 0; i < minPostlength; i++) {
 			String newMessage = listCPost.get(i).getMessage();
 			String oldMessage = listOldPost.get(i).getMessage();
-			
+
 			// if messages have a different, break.
 			if(newMessage == null
 					|| oldMessage == null
@@ -662,7 +683,7 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 				lastSameIndex = i;
 			}
 		}
-		
+
 		//Delete not same old post.
 		List<Post> listRemovePost = new ArrayList<Post>();
 		for (int i = (lastSameIndex + 1); i < listOldPost.size(); i++) {
@@ -672,7 +693,7 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 		for (Post post : listRemovePost) {
 			pm.deletePersistent(post);
 		}
-		
+
 		//Create not same new post
 		for (int i = (lastSameIndex + 1); i < listCPost.size(); i++) {
 			Post post = new Post();
@@ -681,7 +702,7 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 			post.setMessage(listCPost.get(i).getMessage());
 			post.setCount(Integer.valueOf(0));
 			setCreatedAt(user, now, post);
-			
+
 			pm.makePersistent(post);
 			listOldPost.add(post);
 		}
@@ -693,9 +714,9 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 	@Override
 	public CUser updatePostTypeWithKeyword(CPostType postType) throws CharactorbotRPCException {
 		User user = updatePostTypeInternal(postType, false);
-	    
+
 	    log.info(String.format("Updated PostType with keyword. [user email:%s]", user.getEmail()));
-		
+
 	    return new CUser(user.getEmail(), user.getAuthDomain());
 	}
 
@@ -706,25 +727,25 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 	public CUser updatePost(CKeyword cKeyword) throws CharactorbotRPCException {
 		if(cKeyword == null) throw new CharactorbotRPCException(
 				new IllegalArgumentException("null is not allowed."));
-		
+
 		User user = checkLogin();
 		Date now = new Date();
 		PersistenceManager pm = PMF.get().getPersistenceManager();
 		Transaction tx = pm.currentTransaction();
-	
+
 		try{
 			tx.begin();
 			Key key = KeyFactory.stringToKey(cKeyword.getKey());
 			Keyword updateKeyword =  pm.getObjectById(Keyword.class, key);
-			
+
 			// Update UpdatedAt and UpdatedBy for bot memcache
 			PostType postType = updateKeyword.getPostType();
 			postType.setUpdatedAt(now);
 			postType.setUpdatedBy(user);
 			pm.makePersistent(postType);
-			
+
 			updatePostInternal(cKeyword, user, now, pm, updateKeyword);
-			
+
 			User currentLoginUser = checkLogin();
 			// last login check
 			if(user == null
@@ -732,7 +753,7 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 					|| !user.getEmail().equals(currentLoginUser.getEmail())
 					|| !user.getAuthDomain().equals(currentLoginUser.getAuthDomain())
 					) throw new IllegalStateException("Login user was changed!");
-			
+
 			tx.commit();
 		}catch (Exception e) {
 			throw new CharactorbotRPCException(e);
@@ -741,7 +762,7 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 	            tx.rollback();
 	        }
 	    }
-		
+
 	    log.info(String.format("Updated Post. [user email:%s]", user.getEmail()));
 	    return new CUser(user.getEmail(), user.getAuthDomain());
 	}
@@ -755,42 +776,42 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 				new IllegalArgumentException("null is not allowed."));
 		if(type == null) throw new CharactorbotRPCException(
 				new IllegalArgumentException("null is not allowed."));
-		
+
 		User user = checkLogin();
 		Date now = new Date();
 		Key key = KeyFactory.stringToKey(twitterAccountKey);
-		
+
 		PersistenceManager pm = PMF.get().getPersistenceManager();
 		try{
-			
+
 			TwitterAccount account = pm.getObjectById(TwitterAccount.class, key);
 			List<PostType> listPostTypes = account.getListPostType();
-			
+
 			// for performance, don't use transaction
 			for (PostType postType : listPostTypes) {
 				PostTypeEnum target = PostTypeEnum.valueOf(postType.getPostTypeName());
-				
+
 				if(!type.equals(target)) continue;
-				
+
 				// Update UpdatedAt and UpdatedBy for bot memcache
 				postType.setUpdatedAt(now);
 				postType.setUpdatedBy(user);
 				pm.makePersistent(postType);
-				
+
 				List<Keyword> listKeyword = postType.getListKeyword();
 				for (Keyword keyword : listKeyword) {
 					pm.deletePersistent(keyword);
 				}
 			}
-			
+
 		}catch (Exception e) {
 			throw new CharactorbotRPCException(e, twitterAccountKey);
 	    } finally {
             pm.close();
 	    }
-	    
+
 	    log.info(String.format("Deleted all keyword. [user email:%s]", user.getEmail()));
-	    
+
         return new CUser(user.getEmail(), user.getAuthDomain());
 	}
 
@@ -802,19 +823,19 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 	 */
 	private boolean isSameKeywordDetail(CKeyword cKeyword, Keyword updateKeyword) {
 		if(cKeyword == null || updateKeyword == null) return false;
-		
+
 		if(updateKeyword.getKeyword() == null || cKeyword.getKeyword() == null) return false;
 		if(!updateKeyword.getKeyword().equals(cKeyword.getKeyword())) return false;
-		
+
 		if(updateKeyword.getSequence() == null || cKeyword.getSequence() == null) return false;
 		if(!updateKeyword.getSequence().equals(cKeyword.getSequence())) return false;
-		
+
 		if(updateKeyword.getIsActivated() == null || cKeyword.getIsActivated() == null) return false;
 		if(!updateKeyword.getIsActivated().equals(cKeyword.getIsActivated())) return false;
-		
+
 		if(updateKeyword.getIsRegex() == null || cKeyword.getIsRegex() == null) return false;
 		if(!updateKeyword.getIsRegex().equals(cKeyword.getIsRegex())) return false;
-		
+
 		return true;
 	}
 
@@ -862,20 +883,20 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 				new IllegalArgumentException("null is not allowed."));
 		if(consumerSecret == null) throw  new CharactorbotRPCException(
 				new IllegalArgumentException("null is not allowed."));
-		
+
 		checkLogin();
-		
+
 		Twitter twitter = new TwitterFactory().getInstance();
 		twitter.setOAuthConsumer(consumerKey.trim(),
 				consumerSecret.trim());
 	    try {
 	    	RequestToken requestToken = twitter.getOAuthRequestToken();
-	    	
+
 	    	// store map request token.
 	    	ConsumerKeyAndSecret key = new ConsumerKeyAndSecret();
 	    	key.consumerKey = consumerKey;
 	    	key.consumerSecret = consumerSecret;
-	    	
+
 	        Cache cache = null;
 	        try {
 	            CacheFactory cacheFactory = CacheManager.getInstance().getCacheFactory();
@@ -884,13 +905,13 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 	        	throw new CharactorbotRPCException(e);
 	        }
 	        cache.put(key, requestToken);
-	    	
+
 	    	return requestToken.getAuthorizationURL();
 		}catch (Exception e) {
 			throw new CharactorbotRPCException(e);
 	    }
 	}
-	
+
 	/**
 	 * ConsumerKeyAndSecret is key of request token map.
 	 * @author soichiro
@@ -898,7 +919,7 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 	private static class ConsumerKeyAndSecret implements Serializable
 	{
 		private static final long serialVersionUID = 1558922428670314207L;
-		
+
 		private String consumerKey;
 		private String consumerSecret;
 		@Override
@@ -934,36 +955,36 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 			return true;
 		}
 	}
-	
+
 	/* (non-Javadoc)
 	 * @see org.soichiro.charactorbot.client.CharactorbotService#getAccessToken(java.lang.String, java.lang.String, java.lang.String)
 	 */
 	@Override
 	public CAccessToken getAccessToken(String consumerKey,
 			String consumerSecret, String pin) throws CharactorbotRPCException {
-		
+
 		if(consumerKey == null) throw  new CharactorbotRPCException(
 				new IllegalArgumentException("null is not allowed."));
 		if(consumerSecret == null) throw  new CharactorbotRPCException(
 				new IllegalArgumentException("null is not allowed."));
 		if(pin == null) throw  new CharactorbotRPCException(
 				new IllegalArgumentException("null is not allowed."));
-		
+
 		if("".equals(consumerKey.trim())
 				|| "".equals(consumerSecret.trim())
 				|| "".equals(pin.trim()))
 		{
 			return null;
 		}
-		
+
 		Twitter twitter = new TwitterFactory().getInstance();
 		twitter.setOAuthConsumer(consumerKey.trim(),
 				consumerSecret.trim());
-		
+
 	   	ConsumerKeyAndSecret key = new ConsumerKeyAndSecret();
     	key.consumerKey = consumerKey.trim();
     	key.consumerSecret = consumerSecret.trim();
-    	
+
         Cache cache = null;
         try {
             CacheFactory cacheFactory = CacheManager.getInstance().getCacheFactory();
@@ -971,26 +992,26 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
         } catch (CacheException e) {
         	throw new CharactorbotRPCException(e);
         }
-    	
+
 	    try {
 	    	RequestToken requestToken = (RequestToken)cache.get(key);
 	    	AccessToken accessToken = twitter.getOAuthAccessToken(requestToken, pin);
-	    	
+
 	    	CAccessToken cAccessToken = new CAccessToken();
 	    	cAccessToken.setScreenName(accessToken.getScreenName());
 	    	cAccessToken.setUserId((int)accessToken.getUserId());
 	    	cAccessToken.setToken(accessToken.getToken());
 	    	cAccessToken.setTokenSecret(accessToken.getTokenSecret());
-	    	
+
 	    	cAccessToken.setConsumerKey(consumerKey.trim());
 	    	cAccessToken.setConsumerSecret(consumerSecret.trim());
-	    	
+
 	    	PersistenceManager pm = PMF.get().getPersistenceManager();
 			ServerProperties properties = ServerProperties.getInstance(pm);
 			cAccessToken.setIsStopCreateBot(properties.getIsStopCreateBot());
-			
+
 	    	return cAccessToken;
-	    	
+
 		}catch (Exception e) {
 			throw new CharactorbotRPCException(e);
 	    } finally {
@@ -999,19 +1020,19 @@ public class CharactorbotServiceImpl extends RemoteServiceServlet implements
 	}
 
 	/**
-	 * @throws CharactorbotRPCException 
+	 * @throws CharactorbotRPCException
 	 * @see org.soichiro.charactorbot.client.CharactorbotService#getLogEntryList(java.lang.String)
 	 */
 	@Override
 	public List<CLogEntry> getLogEntryList(String twitterAccountKey) throws CharactorbotRPCException {
-		
-		if(twitterAccountKey == null 
+
+		if(twitterAccountKey == null
 				|| "".equals(twitterAccountKey))
 			throw new CharactorbotRPCException(
 					new IllegalArgumentException("twitterAccountKey must not be null."));
-		
+
 		Queue<CLogEntry> queue = LogEntryQueueCache.get(twitterAccountKey);
-		
+
 		List<CLogEntry> listCLogEntry;
 		if(queue == null){
 			listCLogEntry = new ArrayList<CLogEntry>();

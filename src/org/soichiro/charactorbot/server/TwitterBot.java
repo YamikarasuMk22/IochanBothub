@@ -127,6 +127,23 @@ public class TwitterBot implements ITwitterBot {
 	@Override
 	public void run(String keyTwitterAccount, Date now)
 	{
+		// get botSystem stats
+		boolean runbot = false;
+		boolean runpost = false;
+		boolean runreply_me = false;
+		boolean runreply_tl = false;
+		boolean runfollow = false;
+		runbot = ReadBotStatsFile.getStatsValueBoolean(SYSTEM_TXT_FILE, "RUN_BOT");
+		runpost = ReadBotStatsFile.getStatsValueBoolean(SYSTEM_TXT_FILE, "RUN_POST");
+		runreply_me = ReadBotStatsFile.getStatsValueBoolean(SYSTEM_TXT_FILE, "RUN_REPLY_ME");
+		runreply_tl = ReadBotStatsFile.getStatsValueBoolean(SYSTEM_TXT_FILE, "RUN_REPLY_TL");
+		runfollow = ReadBotStatsFile.getStatsValueBoolean(SYSTEM_TXT_FILE, "RUN_FOLLOW");
+
+		if(!runbot) {
+			log.info("botSystem not active.");
+			return;
+		}
+
 		try{
 			PersistenceManager pm = PMF.get().getPersistenceManager();
 			try {
@@ -173,45 +190,32 @@ public class TwitterBot implements ITwitterBot {
 					String keyPostType = mapPostTypeKey.get(postTypeEnum);
 					switch (postTypeEnum) {
 					case NOMAL_POST:
-						nomalPost(keyPostType,
-								pm,
-								twitter,
-								now,
-								timeZoneId,
-								keyTwitterAccount,
-								postTypeEnum);
+						if(runpost) {
+							nomalPost(keyPostType, pm, twitter, now, timeZoneId, keyTwitterAccount, postTypeEnum);
+						} else {
+							log.info("botSystemPost not active.");
+						}
 						break;
 					case REPLY_FOR_ME:
-						reply(keyPostType,
-								pm,
-								twitter,
-								now,
-								true,
-								timeZoneId,
-								keyTwitterAccount,
-								screenName,
-								postTypeEnum);
+						if(runreply_me) {
+							reply(keyPostType, pm, twitter, now, true, timeZoneId, keyTwitterAccount, screenName, postTypeEnum);
+						} else {
+							log.info("botSystemReplyForBot not active.");
+						}
 						break;
 					case REPLY:
-						reply(keyPostType,
-								pm,
-								twitter,
-								now,
-								false,
-								timeZoneId,
-								keyTwitterAccount,
-								screenName,
-								postTypeEnum);
+						if(runreply_tl) {
+							reply(keyPostType, pm, twitter, now, false, timeZoneId, keyTwitterAccount, screenName, postTypeEnum);
+						} else {
+							log.info("botSystemReplyForTimeline not active.");
+						}
 						break;
 					case WELCOME_POST:
-						welcomePost(keyPostType,
-								pm,
-								twitter,
-								now,
-								timeZoneId,
-								screenName,
-								keyTwitterAccount,
-								postTypeEnum);
+						if(runfollow) {
+							welcomePost(keyPostType, pm, twitter, now, timeZoneId, screenName, keyTwitterAccount, postTypeEnum);
+						} else {
+							log.info("botSystemFollow not active.");
+						}
 						break;
 					default:
 						break;
@@ -374,7 +378,7 @@ public class TwitterBot implements ITwitterBot {
 		 }
 
 		// get timeline
-		int maxpage;
+		int maxpage = -1;
 		maxpage = ReadBotStatsFile.getStatsValueInteger(SYSTEM_TXT_FILE, "MAX_PAGE_OF_GETTING_TIMELINE");
 
 		// •ÛŒ¯

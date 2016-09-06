@@ -1,5 +1,6 @@
 package org.soichiro.charactorbot.server;
 
+import java.io.File;
 import java.util.List;
 
 import javax.jdo.PersistenceManager;
@@ -23,56 +24,59 @@ public class ServerProperties {
 	@PrimaryKey
 	@Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
 	private Key key;
-	
+
     /**
      *  Stop creating bot function. you can change this property by datastore viewer.
      */
     @Persistent
     private Boolean isStopCreateBot;
-    
+
     /**
      *  Limit of number of TwitterAccount. you can change this property by datastore viewer.
      */
     @Persistent
     private Integer limitTwitterAccount;
-    
+
     /**
      *  Number of remaining TwitterAccount. Don't change this property by datastore viewer.
      */
     @Persistent
     private Integer numberRemainingTwitterAccount;
-    
+
     /**
      *  Last execute epoch msec.
      */
     @Persistent
     private Long lastExecuteTime;
-    
+
     /**
      *  Administrator's message of top page header.
      */
     @Persistent
     private String messageOnTopPage;
-    
+
 	/** Default of limit of TwitterAccount */
 	public static final Integer DEFAULT_LIMIT_OF_TWITTER_ACCOUNT = Integer.valueOf(23);
-	
+
 	/** Default of message of TopPage */
 	public static final String DEFAULT_MESSAGE_OF_TOP_PAGE = "<Set a message of top page>";
+
+	/** System I/O text file */
+	private static final File SYSTEM_TXT_FILE = new File("datafile/systemtxt.txt");
 
 	/**
      * Private constructor
      */
     private ServerProperties() {
 	}
-    
+
     /**
 	 * @return the key
 	 */
 	public Key getKey() {
 		return key;
 	}
-	
+
 	/**
 	 * @return the isStopCreateBot
 	 */
@@ -86,8 +90,8 @@ public class ServerProperties {
 	public void setIsStopCreateBot(Boolean isStopCreateBot) {
 		this.isStopCreateBot = isStopCreateBot;
 	}
-	
-	
+
+
 	/**
 	 * @return the limitTwitterAccount
 	 */
@@ -102,7 +106,7 @@ public class ServerProperties {
 		this.limitTwitterAccount = limitTwitterAccount;
 	}
 
-	
+
 	/**
 	 * @return the numberRemainingTwitterAccount
 	 */
@@ -156,16 +160,26 @@ public class ServerProperties {
 	public synchronized static ServerProperties getInstance(PersistenceManager pm){
 		Query query = pm.newQuery(ServerProperties.class);
 		List<ServerProperties> listProperties = (List<ServerProperties>)query.execute();
-		
+
 		ServerProperties properties = null;
 		if(listProperties.size() == 0){
 			properties = new ServerProperties();
-			
+
+			// get limit of twitter account
+			Integer limaccount = -1;
+			limaccount = Integer.valueOf(ReadBotStatsFile.getStatsValueInteger(
+					SYSTEM_TXT_FILE, "DEFAULT_LIMIT_OF_TWITTER_ACCOUNT"));
+
+			// •ÛŒ¯
+			if(limaccount == -1) {
+				limaccount = DEFAULT_LIMIT_OF_TWITTER_ACCOUNT;
+			}
+
 			// set default property
 			properties.setIsStopCreateBot(Boolean.FALSE);
-			properties.setLimitTwitterAccount(DEFAULT_LIMIT_OF_TWITTER_ACCOUNT);
-			properties.setNumberRemainingTwitterAccount(DEFAULT_LIMIT_OF_TWITTER_ACCOUNT);
-			
+			properties.setLimitTwitterAccount(limaccount);
+			properties.setNumberRemainingTwitterAccount(limaccount);
+
 			pm.makePersistent(properties);
 			return properties;
 		} else {
