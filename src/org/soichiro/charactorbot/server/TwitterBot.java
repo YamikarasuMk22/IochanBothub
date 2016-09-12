@@ -83,6 +83,9 @@ public class TwitterBot implements ITwitterBot {
 	/** Data I/O text file */
 	//private static final File DATA_TXT_FILE = new File("datafile/datatxt.txt");
 
+	/** System I/O text file */
+	private static final String ADMIN_TWITTER_ID = "YamikarasuMk22";
+
 	/**
 	 * Constructor
 	 */
@@ -483,13 +486,7 @@ public class TwitterBot implements ITwitterBot {
 							Pattern pattern = Pattern.compile(keyword.getKeyword(), Pattern.DOTALL);
 							Matcher matcher = pattern.matcher(text);
 							if(matcher.matches()){
-								postForReply(status,
-										keyword.getListPost(),
-										twitter,
-										timeZoneId,
-										matcher,
-										now,
-										keyTwitterAccount);
+								postForReply(status, keyword.getListPost(), twitter, timeZoneId, matcher, now, keyTwitterAccount);
 								setRepliedStatus.add(status);
 								continue s;
 							}
@@ -497,13 +494,7 @@ public class TwitterBot implements ITwitterBot {
 							Pattern pattern = Pattern.compile(".*"+ keyword.getKeyword() + ".*", Pattern.DOTALL);
 							Matcher matcher = pattern.matcher(text);
 							if(matcher.matches()){
-								postForReply(status,
-										keyword.getListPost(),
-										twitter,
-										timeZoneId,
-										null,
-										now,
-										keyTwitterAccount);
+								postForReply(status, keyword.getListPost(), twitter, timeZoneId, null, now, keyTwitterAccount);
 								setRepliedStatus.add(status);
 								continue s;
 							}
@@ -744,7 +735,7 @@ public class TwitterBot implements ITwitterBot {
 
 			// Replace matcher group
 			// this order of replacement is to guard tag hacking.
-			if(matcher != null){
+			if(matcher != null) {
 				int groupCount = matcher.groupCount();
 				for (int i = 0; i < 10; i++) {
 					String group = null;
@@ -756,7 +747,7 @@ public class TwitterBot implements ITwitterBot {
 			// process #botstats# tag
 			String systempropertyTag = "#botstats#";
 			boolean hasSystempropertyTag = message.contains(systempropertyTag);
-			if(hasSystempropertyTag){
+			if(hasSystempropertyTag) {
 				message = message.replaceAll(systempropertyTag, "");
 				message = ReadBotStatsFile.ReadBotStats(SYSTEM_TXT_FILE);
 			}
@@ -764,11 +755,21 @@ public class TwitterBot implements ITwitterBot {
 			// process #noreply# tag
 			String noreplyTag = "#noreply#";
 			boolean hasNoreplyTag = message.contains(noreplyTag);
-			if(hasNoreplyTag){
+			if(hasNoreplyTag) {
 				message = message.replaceAll(noreplyTag, "");
 			} else {
-				message =  "@" + status.getUser().getScreenName()
-						+ " " + message;
+
+			// process #mention# tag
+				String mentionTag = "#mention#";
+				boolean hasMentionTag = message.contains(mentionTag);
+				if(hasMentionTag) {
+					message = message.replaceAll(mentionTag, "");
+					message =  "@" + ADMIN_TWITTER_ID
+							+ " " + message;
+				} else {
+					message =  "@" + status.getUser().getScreenName()
+							+ " " + message;
+				}
 			}
 
 			StatusUpdate statusUpdate = new StatusUpdate(message);

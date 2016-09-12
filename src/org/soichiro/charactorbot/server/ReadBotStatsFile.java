@@ -5,6 +5,11 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 
+/**
+ * Read Stats By Text File.
+ * @author YamikarasuMk22
+ *
+ */
 public class ReadBotStatsFile {
 
 	public static String ReadBotStats(File filename) {
