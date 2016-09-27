@@ -2,6 +2,9 @@ package org.soichiro.charactorbot.server;
 
 import java.util.List;
 
+import javax.jdo.annotations.IdGeneratorStrategy;
+import javax.jdo.annotations.IdentityType;
+import javax.jdo.annotations.PersistenceCapable;
 import javax.jdo.annotations.Persistent;
 import javax.jdo.annotations.PrimaryKey;
 
@@ -15,9 +18,11 @@ import com.google.appengine.api.datastore.KeyFactory;
  * @author YamikarasuMk22
  *
  */
+@PersistenceCapable(identityType = IdentityType.APPLICATION)
 public class FKeyword {
 
 	@PrimaryKey
+	@Persistent(valueStrategy = IdGeneratorStrategy.IDENTITY)
 	private Key key;
 
 	/** Parent PostType */
